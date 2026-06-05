@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة موديلات الأطفال</title>
+
+<!-- External Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<!-- ExcelJS — لدعم الصور داخل Excel -->
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<!-- FileSaver — لتنزيل الملف -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<style>
+  /* ===== CSS VARIABLES & RESET ===== */
+  :root {
+    --primary: #1a3c5e;
+    --primary-light: #2563a8;
+    --accent: #e8a020;
+    --accent-light: #fbbf24;
+    --bg-page: #f0f4f8;
+    --bg-card: #ffffff;
+    --bg-sidebar: #1a3c5e;
+    --text-primary: #1a1f2e;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --success: #059669;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --font-arabic: 'Segoe UI', Tahoma, 'Arial Unicode MS', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-arabic);
+    background: var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* ===== TOP HEADER ===== */
+  .top-header {
+    background: var(--primary);
+    color: white;
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-md);
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-logo {
+    width: 38px;
+    height: 38px;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .header-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .header-subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 1px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* ===== SYNC STATUS BADGE ===== */
+  .sync-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    transition: all 0.3s;
+  }
+  .sync-badge.online  { background: rgba(5,150,105,0.3);  border-color: rgba(5,150,105,0.6); }
+  .sync-badge.offline { background: rgba(220,38,38,0.3);  border-color: rgba(220,38,38,0.6); }
+  .sync-badge.syncing { background: rgba(217,119,6,0.3);  border-color: rgba(217,119,6,0.6); }
+  .sync-badge.pending { background: rgba(217,119,6,0.25); border-color: rgba(217,119,6,0.5); }
+
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sync-badge.online  .sync-dot { background: #34d399; animation: pulse-green 2s infinite; }
+  .sync-badge.offline .sync-dot { background: #f87171; }
+  .sync-badge.syncing .sync-dot { background: #fbbf24; animation: spin 1s linear infinite; }
+  .sync-badge.pending .sync-dot { background: #fbbf24; animation: pulse-amber 1.5s infinite; }
+
+  @keyframes pulse-green {
+    0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+    50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0); }
+  }
+  @keyframes pulse-amber {
+    0%,100% { box-shadow: 0 0 0 0 rgba(251,191,36,0.5); }
+    50%      { box-shadow: 0 0 0 5px rgba(251,191,36,0); }
+  }
+
+  /* ===== EXCHANGE RATE BAR ===== */
+  .rate-bar {
+    background: #0f2840;
+    padding: 8px 24px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .rate-bar-label {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .rate-inputs {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .rate-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+  }
+
+  .rate-field label {
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .rate-field input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--accent-light);
+    font-size: 14px;
+    font-weight: 700;
+    width: 80px;
+    font-family: var(--font-arabic);
+    direction: ltr;
+    text-align: center;
+  }
+
+  .rate-field input::placeholder { color: rgba(255,255,255,0.3); }
+
+  /* ===== MAIN LAYOUT ===== */
+  .main-layout {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  /* ===== SIDEBAR / FORM ===== */
+  .sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 112px;
+    max-height: calc(100vh - 132px);
+    overflow-y: auto;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ===== CARD BASE ===== */
+  .card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-header-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .card-header h2 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .card-body { padding: 20px; }
+
+  /* ===== FORM FIELDS ===== */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: #fafafa;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: var(--font-arabic);
+    direction: rtl;
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(37,99,168,0.12);
+    background: white;
+  }
+
+  .form-group input[readonly] {
+    background: #f1f5f9;
+    color: var(--text-secondary);
+    cursor: not-allowed;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .calc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--success);
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  /* ===== IMAGE UPLOAD ===== */
+  .image-upload-area {
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f8fafc;
+    position: relative;
+  }
+
+  .image-upload-area:hover {
+    border-color: var(--primary-light);
+    background: #eff6ff;
+  }
+
+  .image-upload-area.has-image {
+    padding: 0;
+    border-style: solid;
+    border-color: var(--primary-light);
+    overflow: hidden;
+  }
+
+  .image-upload-area img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    border-radius: calc(var(--radius-md) - 2px);
+  }
+
+  .upload-placeholder {
+    color: var(--text-muted);
+  }
+
+  .upload-placeholder .upload-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    color: var(--border-strong);
+  }
+
+  .upload-placeholder p {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .upload-placeholder span {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  #imageInput { display: none; }
+
+  .image-remove-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(220,38,38,0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 2;
+  }
+
+  .image-upload-area.has-image:hover .image-remove-btn { opacity: 1; }
+
+  /* ===== AGES / SIZES ===== */
+  .age-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .age-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .age-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #0369a1;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .age-add-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .age-add-row input {
+    flex: 1;
+  }
+
+  /* ===== AGE RANGE ROW ===== */
+  .age-range-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .age-range-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .age-num-input {
+    width: 52px !important;
+    padding: 8px 6px !important;
+    text-align: center;
+    font-weight: 700;
+    direction: ltr;
+  }
+
+  .age-unit-select {
+    padding: 8px 6px !important;
+    font-size: 13px !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    background: #fafafa !important;
+    color: var(--text-primary) !important;
+    cursor: pointer;
+    font-family: var(--font-arabic);
+    outline: none;
+  }
+
+  .age-unit-select:focus {
+    border-color: var(--primary-light) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,168,0.12);
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-family: var(--font-arabic);
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: var(--radius-md);
+    margin-top: 4px;
+  }
+
+  .btn-primary:hover { background: var(--primary-light); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--border-strong);
+    color: var(--text-secondary);
+  }
+
+  .btn-outline:hover { border-color: var(--primary-light); color: var(--primary-light); background: #eff6ff; }
+
+  .btn-success {
+    background: var(--success);
+    color: white;
+  }
+
+  .btn-success:hover { background: #047857; transform: translateY(-1px); }
+
+  .btn-warning {
+    background: var(--warning);
+    color: white;
+  }
+
+  .btn-warning:hover { background: #b45309; transform: translateY(-1px); }
+
+  .btn-danger-ghost {
+    background: transparent;
+    border: 1px solid #fecaca;
+    color: var(--danger);
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .btn-danger-ghost:hover { background: #fef2f2; border-color: var(--danger); }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .btn-ghost:hover { background: var(--bg-page); }
+
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ===== CONTENT AREA ===== */
+  .content-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ===== TOOLBAR ===== */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .count-badge {
+    background: var(--primary);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .toolbar-export {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== MODELS GRID ===== */
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-muted);
+  }
+
+  .empty-state-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  .empty-state h3 {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+
+  /* ===== MODEL CARD ===== */
+  .model-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .model-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .model-card-image {
+    position: relative;
+    aspect-ratio: 1;
+    background: #f1f5f9;
+    overflow: hidden;
+  }
+
+  .model-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .model-card-image .no-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .model-card-image .no-image span {
+    font-size: 40px;
+  }
+
+  .card-img-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.5));
+    padding: 20px 10px 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .model-card:hover .card-img-actions { opacity: 1; }
+
+  .card-img-actions .btn {
+    background: rgba(255,255,255,0.9);
+    color: var(--text-primary);
+    border: none;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    backdrop-filter: blur(4px);
+  }
+
+  .model-card-body {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .model-source {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow: hidden;
+  }
+
+  .source-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .source-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  /* ===== PRICE BREAKDOWN ===== */
+  .price-breakdown {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .price-row:last-child { border-bottom: none; }
+
+  .price-row.highlight {
+    background: linear-gradient(135deg, #fff7ed, #fefce8);
+    font-weight: 700;
+  }
+
+  .price-currency {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .currency-flag {
+    font-size: 14px;
+  }
+
+  .price-amount {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .price-amount.rmb { color: #c0392b; }
+  .price-amount.usd { color: #27ae60; }
+  .price-amount.iqd { color: var(--primary-light); }
+
+  /* ===== AGE TAGS ===== */
+  .age-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .age-tag {
+    padding: 3px 8px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid #bae6fd;
+  }
+
+  .model-card-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  /* ===== STATS BAR ===== */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    direction: ltr;
+    text-align: right;
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.success { color: var(--success); }
+  .stat-value.info { color: var(--primary-light); }
+
+  /* ===== TOAST ===== */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .toast {
+    background: #1e293b;
+    color: white;
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+    direction: rtl;
+  }
+
+  .toast.success { border-right: 3px solid var(--success); }
+  .toast.error { border-right: 3px solid var(--danger); }
+
+  @keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ===== LOADING OVERLAY ===== */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== CONFIRMATION MODAL ===== */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 9990;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop.active { display: flex; }
+
+  .modal-box {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    max-width: 360px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    direction: rtl;
+  }
+
+  .modal-icon {
+    font-size: 44px;
+    margin-bottom: 12px;
+  }
+
+  .modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .modal-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .main-layout {
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .sidebar {
+      width: 100%;
+      position: static;
+      max-height: none;
+    }
+
+    .top-header { padding: 0 16px; }
+    .rate-bar { padding: 8px 16px; }
+  }
+
+  @media (max-width: 600px) {
+    .models-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stats-bar {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .header-title { font-size: 14px; }
+    .toolbar-export { width: 100%; }
+    .toolbar-export .btn { flex: 1; }
+  }
+
+  @media (max-width: 400px) {
+    .models-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="top-header">
+  <div class="header-brand">
+    <div class="header-logo">م</div>
+    <div>
+      <div class="header-title">إدارة موديلات الأطفال</div>
+      <div class="header-subtitle">تتبع المشتريات وحساب التكاليف</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="sync-badge offline" id="syncBadge">
+      <div class="sync-dot"></div>
+      <span id="syncText">غير متصل</span>
+    </div>
+    <button class="btn btn-outline" onclick="clearAllConfirm()" style="color:white; border-color:rgba(255,255,255,0.3); font-size:12px;">
+      🗑️ مسح الكل
+    </button>
+  </div>
+</header>
+
+<!-- ===== EXCHANGE RATE BAR ===== -->
+<div class="rate-bar">
+  <span class="rate-bar-label">أسعار الصرف:</span>
+  <div class="rate-inputs">
+    <div class="rate-field">
+      <label>1 RMB = </label>
+      <input type="number" id="rmbToUsd" step="0.001" placeholder="0.138" oninput="saveRates(); recalcAll()">
+      <label>USD</label>
+    </div>
+    <div class="rate-field">
+      <label>1 USD = </label>
+      <input type="number" id="usdToIqd" step="1" placeholder="1310" oninput="saveRates(); recalcAll()">
+      <label>IQD</label>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECURITY TIMER BANNER ===== -->
+<div id="secBanner" style="background:#f0fdf4; border-bottom: 2px solid #059669; padding: 8px 24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; direction:rtl; transition: all 0.3s;">
+  <div style="flex:1; min-width:200px;">
+    <div style="font-size:12px; font-weight:700; color:#1a3c5e; margin-bottom:4px;" id="secTimerLabel">🔒 جارٍ تحميل معلومات الأمان...</div>
+    <div style="background:#e2e8f0; border-radius:4px; height:6px; overflow:hidden;">
+      <div id="secTimerBar" style="height:100%; width:0%; background:#059669; border-radius:4px; transition: width 0.5s;"></div>
+    </div>
+  </div>
+  <button onclick="showSecuritySteps()" style="background:#1a3c5e; color:white; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; font-family:inherit;">
+    📋 خطوات التجديد
+  </button>
+</div>
+
+<!-- ===== SECURITY STEPS MODAL ===== -->
+<div class="modal-backdrop" id="secStepsModal">
+  <div class="modal-box" style="max-width:480px; text-align:right; direction:rtl;">
+    <div style="font-size:28px; margin-bottom:8px;">🔐</div>
+    <div class="modal-title">تجديد قواعد أمان Firestore</div>
+    <div class="modal-text" style="text-align:right;">
+      بعد انتهاء الـ 30 يوم، اتبع هذه الخطوات البسيطة:
+    </div>
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; text-align:right;">
+      <div style="font-size:13px; line-height:2; color:#1a1f2e;">
+        <div style="margin-bottom:6px;"><span style="background:#1a3c5e;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:6px;">1</span> اذهب إلى <strong>console.firebase.google.com</strong></div>
+        <div style="margin-bottom:6px;"><span style="background:#1a3c5e;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:6px;">2</span> افتح مشروع <strong>models-manager</strong></div>
+        <div style="margin-bottom:6px;"><span style="background:#1a3c5e;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:6px;">3</span> من القائمة اختر <strong>Firestore</strong> ← <strong>Rules</strong></div>
+        <div style="margin-bottom:6px;"><span style="background:#1a3c5e;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:6px;">4</span> احذف كل النص واكتب هذا بدلاً منه:</div>
+        <div style="background:#1a1f2e; color:#34d399; border-radius:6px; padding:10px 12px; font-family:monospace; font-size:12px; margin: 6px 0; direction:ltr; text-align:left;">
+          rules_version = '2';<br>
+          service cloud.firestore {<br>
+          &nbsp;&nbsp;match /databases/{db}/documents {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;match /{doc=**} {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if true;<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+          &nbsp;&nbsp;}<br>
+          }
+        </div>
+        <div><span style="background:#1a3c5e;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:6px;">5</span> اضغط <strong>Publish</strong> — وخلاص! ✅</div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn" style="background:#1a3c5e;color:white;" onclick="closeSecSteps()">فهمت ✅</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN LAYOUT ===== -->
+<div class="main-layout">
+
+  <!-- ===== SIDEBAR FORM ===== -->
+  <aside class="sidebar">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-icon">+</div>
+        <h2>إضافة موديل جديد</h2>
+      </div>
+      <div class="card-body">
+
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label>صورة الموديل</label>
+          <div class="image-upload-area" id="uploadArea" onclick="triggerImageInput()">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <div class="upload-icon">📷</div>
+              <p>انقر لرفع صورة</p>
+              <span>يُفضل 1080×1080 بكسل</span>
+            </div>
+            <img id="imagePreview" style="display:none;" alt="معاينة الصورة">
+            <button class="image-remove-btn" id="removeImageBtn" onclick="removeImage(event)" title="إزالة الصورة">✕</button>
+          </div>
+          <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+        </div>
+
+        <!-- Source -->
+        <div class="form-group">
+          <label>المصدر / الصفحة</label>
+          <input type="text" id="sourceInput" placeholder="مثال: 1688، تاوباو، صفحة إنستغرام...">
+        </div>
+
+        <!-- RMB Price -->
+        <div class="form-group">
+          <label>سعر الشراء بالرمبي (¥)</label>
+          <input type="number" id="rmbPrice" placeholder="0.00" step="0.01" min="0"
+            oninput="calculatePrices()">
+        </div>
+
+        <!-- USD (auto) -->
+        <div class="form-group">
+          <div class="calc-badge">🔄 محسوب تلقائياً</div>
+          <label>سعر الشراء بالدولار ($)</label>
+          <input type="number" id="usdPrice" readonly placeholder="يحسب تلقائياً">
+        </div>
+
+        <!-- IQD (auto) -->
+        <div class="form-group">
+          <div class="calc-badge">🔄 محسوب تلقائياً</div>
+          <label>سعر الشراء بالدينار العراقي (د.ع)</label>
+          <input type="number" id="iqdPrice" readonly placeholder="يحسب تلقائياً">
+        </div>
+
+        <!-- Ages/Sizes -->
+        <div class="form-group">
+          <label>الأعمار / المقاسات المتوفرة</label>
+
+          <!-- الشرائح المضافة -->
+          <div class="age-chips" id="ageChips"></div>
+
+          <!-- حقول الإدخال المنظمة: من [رقم] [وحدة] إلى [رقم] [وحدة] -->
+          <div class="age-range-row">
+            <span class="age-range-label">من</span>
+            <input type="number" id="ageFrom" min="0" max="99" placeholder="0" class="age-num-input">
+            <select id="ageFromUnit" class="age-unit-select">
+              <option value="شهر">شهر</option>
+              <option value="سنة" selected>سنة</option>
+            </select>
+            <span class="age-range-label">إلى</span>
+            <input type="number" id="ageTo" min="0" max="99" placeholder="0" class="age-num-input">
+            <select id="ageToUnit" class="age-unit-select">
+              <option value="شهر">شهر</option>
+              <option value="سنة" selected>سنة</option>
+            </select>
+            <button class="btn btn-outline btn-icon" onclick="addAgeRange()" title="إضافة">+</button>
+          </div>
+
+          <!-- مثال توضيحي -->
+          <div style="font-size:11px; color:var(--text-muted); margin-top:5px; padding: 5px 8px; background:#f8fafc; border-radius:6px; border:1px solid var(--border);">
+            💡 مثال: من <strong>6 شهر</strong> إلى <strong>12 سنة</strong> ← اضغط +
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+          <label>ملاحظات إضافية</label>
+          <textarea id="notesInput" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveModel()">
+          💾 حفظ الموديل
+        </button>
+
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== CONTENT AREA ===== -->
+  <main class="content-area">
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <div class="stat-label">إجمالي الموديلات</div>
+        <div class="stat-value accent" id="statCount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">إجمالي التكلفة ¥</div>
+        <div class="stat-value" id="statRmb" style="font-size:15px;">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">إجمالي التكلفة $</div>
+        <div class="stat-value success" id="statUsd" style="font-size:15px;">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">إجمالي التكلفة د.ع</div>
+        <div class="stat-value info" id="statIqd" style="font-size:13px;">0</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-info">
+        <span class="count-badge" id="toolbarCount">0 موديل</span>
+        <span style="font-size:13px; color:var(--text-muted);">قائمة المشتريات</span>
+      </div>
+      <div class="toolbar-export">
+        <button class="btn btn-success" onclick="exportExcel()">
+          📊 Excel
+        </button>
+        <button class="btn btn-warning" onclick="exportPDF()">
+          📄 PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Models Grid -->
+    <div class="models-grid" id="modelsGrid">
+      <div class="empty-state">
+        <div class="empty-state-icon">👗</div>
+        <h3>لا توجد موديلات بعد</h3>
+        <p>أضف موديلك الأول من النموذج على اليسار</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <span id="loadingText">جارٍ المعالجة...</span>
+</div>
+
+<!-- ===== CONFIRM MODAL ===== -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-icon" id="modalIcon">⚠️</div>
+    <div class="modal-title" id="modalTitle">تأكيد الحذف</div>
+    <div class="modal-text" id="modalText">هل أنت متأكد؟</div>
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--danger); color:white;" id="modalConfirmBtn">تأكيد</button>
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ================================================================
+   FIREBASE CONFIG & INIT
+   ================================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBthT4iosEBnFaJ3niWwZPpox_KGZ9wktM",
+  authDomain: "models-manager-49f26.firebaseapp.com",
+  projectId: "models-manager-49f26",
+  storageBucket: "models-manager-49f26.firebasestorage.app",
+  messagingSenderId: "444114104226",
+  appId: "1:444114104226:web:935ea28259396f4bcaccfb",
+  measurementId: "G-BB29N9E28L"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// تفعيل الحفظ المحلي أوفلاين
+db.enablePersistence({ synchronizeTabs: true })
+  .catch(err => console.warn('Offline persistence:', err.code));
+
+const COLLECTION = 'models';
+const RATES_KEY  = 'modelManager_rates_v1';
+const TIMER_KEY  = 'modelManager_firestore_created';
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let models             = [];
+let currentAges        = [];
+let currentImageBase64 = null; // base64 مضغوطة للحفظ والعرض
+let editingId          = null;
+let isOnline           = navigator.onLine;
+
+/* ================================================================
+   30-DAY SECURITY TIMER
+   ================================================================ */
+function initSecurityTimer() {
+  let created = localStorage.getItem(TIMER_KEY);
+  if (!created) {
+    created = Date.now().toString();
+    localStorage.setItem(TIMER_KEY, created);
+  }
+
+  function tick() {
+    const now      = Date.now();
+    const start    = parseInt(created);
+    const elapsed  = now - start;
+    const days30   = 30 * 24 * 60 * 60 * 1000;
+    const remaining = days30 - elapsed;
+    const bar       = document.getElementById('secTimerBar');
+    const label     = document.getElementById('secTimerLabel');
+    const banner    = document.getElementById('secBanner');
+    if (!bar || !label || !banner) return;
+
+    if (remaining <= 0) {
+      bar.style.width = '100%';
+      bar.style.background = '#dc2626';
+      label.textContent = '⛔ انتهت المدة! يجب تحديث قواعد الأمان الآن';
+      banner.style.borderColor = '#dc2626';
+      banner.style.background  = '#fef2f2';
+      return;
+    }
+
+    const daysLeft  = Math.floor(remaining / (24*60*60*1000));
+    const hoursLeft = Math.floor((remaining % (24*60*60*1000)) / (60*60*1000));
+    const pct       = Math.min(100, (elapsed / days30 * 100)).toFixed(1);
+    bar.style.width = pct + '%';
+    bar.style.background = daysLeft <= 5 ? '#dc2626' : daysLeft <= 10 ? '#d97706' : '#059669';
+
+    if (daysLeft <= 5) {
+      label.textContent = `⚠️ تبقى ${daysLeft} أيام و ${hoursLeft} ساعة — يجب تحديث قواعد الأمان قريباً!`;
+      banner.style.borderColor = '#dc2626'; banner.style.background = '#fff7f7';
+    } else if (daysLeft <= 10) {
+      label.textContent = `🔔 تبقى ${daysLeft} يوم و ${hoursLeft} ساعة على انتهاء وضع الاختبار`;
+      banner.style.borderColor = '#d97706'; banner.style.background = '#fffbeb';
+    } else {
+      label.textContent = `🔒 قواعد الأمان: تبقى ${daysLeft} يوم و ${hoursLeft} ساعة (وضع الاختبار)`;
+      banner.style.borderColor = '#059669'; banner.style.background = '#f0fdf4';
+    }
+  }
+  tick();
+  setInterval(tick, 60000);
+}
+
+function showSecuritySteps() { document.getElementById('secStepsModal').classList.add('active'); }
+function closeSecSteps()      { document.getElementById('secStepsModal').classList.remove('active'); }
+
+/* ================================================================
+   ONLINE / OFFLINE
+   ================================================================ */
+function updateSyncBadge(state) {
+  const badge = document.getElementById('syncBadge');
+  const text  = document.getElementById('syncText');
+  if (!badge) return;
+  badge.className = 'sync-badge ' + state;
+  const labels = { online:'☁️ متزامن', offline:'📴 بدون إنترنت', syncing:'🔄 جارٍ المزامنة...', pending:'⏳ في انتظار الإنترنت' };
+  text.textContent = labels[state] || state;
+}
+
+window.addEventListener('online',  () => { isOnline = true;  updateSyncBadge('syncing'); setTimeout(() => updateSyncBadge('online'), 2000); showToast('عاد الاتصال — جارٍ رفع البيانات ☁️', 'success'); });
+window.addEventListener('offline', () => { isOnline = false; updateSyncBadge('offline'); showToast('انقطع الإنترنت — البيانات محفوظة محلياً 📴', 'error'); });
+
+/* ================================================================
+   RATES
+   ================================================================ */
+function saveRates() {
+  const r2u = parseFloat(document.getElementById('rmbToUsd').value) || 0;
+  const u2i = parseFloat(document.getElementById('usdToIqd').value) || 0;
+  localStorage.setItem(RATES_KEY, JSON.stringify({ rmbToUsd: r2u, usdToIqd: u2i }));
+}
+
+function loadRates() {
+  try {
+    const raw = localStorage.getItem(RATES_KEY);
+    if (raw) {
+      const r = JSON.parse(raw);
+      document.getElementById('rmbToUsd').value = r.rmbToUsd || '';
+      document.getElementById('usdToIqd').value = r.usdToIqd || '';
+    }
+  } catch {}
+}
+
+function getRates() {
+  return {
+    rmbToUsd: parseFloat(document.getElementById('rmbToUsd').value) || 0,
+    usdToIqd: parseFloat(document.getElementById('usdToIqd').value) || 0
+  };
+}
+
+/* ================================================================
+   PRICE CALCULATION
+   ================================================================ */
+function calculatePrices() {
+  const rmb = parseFloat(document.getElementById('rmbPrice').value) || 0;
+  const { rmbToUsd, usdToIqd } = getRates();
+  const usd = rmb * rmbToUsd;
+  const iqd = usd * usdToIqd;
+  document.getElementById('usdPrice').value = usd > 0 ? usd.toFixed(3) : '';
+  document.getElementById('iqdPrice').value = iqd > 0 ? Math.round(iqd) : '';
+}
+
+function recalcAll() { renderGrid(); updateStats(); }
+function calcModel(rmb) {
+  const { rmbToUsd, usdToIqd } = getRates();
+  return { usd: rmb * rmbToUsd, iqd: rmb * rmbToUsd * usdToIqd };
+}
+
+/* ================================================================
+   IMAGE COMPRESSION — ذكي يحافظ على الجودة
+   خطة الضغط:
+     1. تغيير الأبعاد: الحد الأقصى 1080px (نفس نسبة العرض للارتفاع)
+     2. جودة JPEG تبدأ من 0.92 وتنزل تدريجياً حتى يصل الحجم < 700KB
+     3. إذا الصورة أصلاً أقل من 700KB تُستخدم بدون ضغط
+   ================================================================ */
+function triggerImageInput() {
+  if (!currentImageBase64) document.getElementById('imageInput').click();
+}
+
+async function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('يرجى رفع ملف صورة صحيح', 'error'); return; }
+
+  const originalMB = (file.size / 1024 / 1024).toFixed(2);
+  showToast(`📸 جارٍ معالجة الصورة (${originalMB} MB)...`, 'success');
+
+  try {
+    const compressed = await smartCompress(file);
+    const compMB = (compressed.length * 0.75 / 1024 / 1024).toFixed(2); // base64 to bytes
+
+    currentImageBase64 = compressed;
+    document.getElementById('imagePreview').src = compressed;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('uploadPlaceholder').style.display = 'none';
+    document.getElementById('uploadArea').classList.add('has-image');
+    document.getElementById('removeImageBtn').style.display = 'flex';
+
+    if (parseFloat(originalMB) > parseFloat(compMB)) {
+      showToast(`✅ ضُغطت من ${originalMB}MB إلى ~${compMB}MB مع الحفاظ على الجودة`, 'success');
+    } else {
+      showToast(`✅ الصورة جاهزة (${originalMB}MB)`, 'success');
+    }
+  } catch(err) {
+    showToast('حدث خطأ أثناء معالجة الصورة', 'error');
+    console.error(err);
+  }
+}
+
+/**
+ * ضغط ذكي يحافظ على الجودة:
+ * - يحترم نسبة العرض/الارتفاع الأصلية تماماً
+ * - يبدأ بجودة 92% وينزل تدريجياً
+ * - يتوقف بمجرد وصول الحجم < 700KB
+ * - الحد الأقصى للجودة الأدنى هو 72% (لا يضغط أكثر من ذلك)
+ */
+async function smartCompress(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      // احترام النسبة الأصلية بالكامل
+      let { width, height } = img;
+      const MAX_PX = 1080;
+
+      if (width > MAX_PX || height > MAX_PX) {
+        if (width >= height) {
+          // صورة أفقية أو مربعة
+          height = Math.round(height * MAX_PX / width);
+          width  = MAX_PX;
+        } else {
+          // صورة عمودية
+          width  = Math.round(width * MAX_PX / height);
+          height = MAX_PX;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      // رسم الصورة بجودة عالية
+      ctx.imageSmoothingEnabled  = true;
+      ctx.imageSmoothingQuality  = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // ضغط تدريجي — يبدأ من 92% وينزل بخطوات صغيرة
+      const TARGET_BYTES = 700 * 1024; // 700KB
+      const MIN_QUALITY  = 0.72;
+      let   quality      = 0.92;
+      let   result       = canvas.toDataURL('image/jpeg', quality);
+
+      // إذا الحجم صغير أصلاً، أرجعه مباشرة
+      const approxBytes = result.length * 0.75;
+      if (approxBytes <= TARGET_BYTES) {
+        resolve(result);
+        return;
+      }
+
+      // اضغط تدريجياً حتى الهدف
+      while (quality > MIN_QUALITY) {
+        quality -= 0.04; // خطوة صغيرة للحفاظ على الجودة
+        result = canvas.toDataURL('image/jpeg', quality);
+        if (result.length * 0.75 <= TARGET_BYTES) break;
+      }
+
+      resolve(result);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      // fallback: قراءة الملف مباشرة
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    };
+
+    img.src = url;
+  });
+}
+
+function removeImage(e) {
+  e && e.stopPropagation && e.stopPropagation();
+  currentImageBase64 = null;
+  document.getElementById('imagePreview').style.display = 'none';
+  document.getElementById('uploadPlaceholder').style.display = '';
+  document.getElementById('uploadArea').classList.remove('has-image');
+  document.getElementById('imageInput').value = '';
+  document.getElementById('removeImageBtn').style.display = 'none';
+}
+
+/* ================================================================
+   AGES — نظام النطاق (من رقم وحدة إلى رقم وحدة)
+   ================================================================ */
+function renderAgeChips() {
+  document.getElementById('ageChips').innerHTML = currentAges.map((a, i) => `
+    <div class="age-chip">${a}
+      <button onclick="removeAge(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addAgeRange() {
+  const fromNum  = document.getElementById('ageFrom').value.trim();
+  const fromUnit = document.getElementById('ageFromUnit').value;
+  const toNum    = document.getElementById('ageTo').value.trim();
+  const toUnit   = document.getElementById('ageToUnit').value;
+
+  if (!fromNum || !toNum) {
+    showToast('يرجى إدخال الرقمين (من / إلى)', 'error');
+    return;
+  }
+
+  // بناء النص: "6 شهر - 12 سنة"
+  const label = `${fromNum} ${fromUnit} - ${toNum} ${toUnit}`;
+
+  if (!currentAges.includes(label)) {
+    currentAges.push(label);
+    renderAgeChips();
+  }
+
+  // تفريغ الحقول بعد الإضافة
+  document.getElementById('ageFrom').value = '';
+  document.getElementById('ageTo').value   = '';
+}
+
+// دعم Enter على حقول الأعمار
+document.addEventListener('DOMContentLoaded', () => {
+  ['ageFrom','ageTo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addAgeRange(); }
+    });
+  });
+});
+
+function removeAge(i) { currentAges.splice(i, 1); renderAgeChips(); }
+
+
+/* ================================================================
+   FIRESTORE CRUD
+   ================================================================ */
+function startRealtimeListener() {
+  updateSyncBadge(isOnline ? 'syncing' : 'offline');
+  db.collection(COLLECTION)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot({ includeMetadataChanges: true }, snapshot => {
+      models = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const fromCache  = snapshot.metadata.fromCache;
+      const hasPending = snapshot.metadata.hasPendingWrites;
+      if (hasPending)     updateSyncBadge('pending');
+      else if (fromCache) updateSyncBadge('offline');
+      else                updateSyncBadge('online');
+      renderGrid();
+      updateStats();
+    }, err => {
+      console.error('Firestore error:', err);
+      updateSyncBadge('offline');
+    });
+}
+
+async function saveModel() {
+  const rmb    = parseFloat(document.getElementById('rmbPrice').value);
+  const source = document.getElementById('sourceInput').value.trim();
+
+  if (!rmb || rmb <= 0) { showToast('يرجى إدخال سعر الشراء بالرمبي', 'error'); return; }
+
+  const { usd, iqd } = calcModel(rmb);
+  const notes = document.getElementById('notesInput').value.trim();
+
+  const data = {
+    image:     currentImageBase64 || null,
+    source,
+    rmb,
+    usd,
+    iqd,
+    ages:      [...currentAges],
+    notes,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    if (editingId) {
+      await db.collection(COLLECTION).doc(editingId).update(data);
+      showToast('تم تحديث الموديل ✅', 'success');
+      editingId = null;
+      document.querySelector('.btn-primary').textContent = '💾 حفظ الموديل';
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(COLLECTION).add(data);
+      showToast('تم حفظ الموديل ✅', 'success');
+    }
+    resetForm();
+  } catch(e) {
+    showToast('تم الحفظ محلياً — سيُرفع عند الاتصال ☁️', 'success');
+    resetForm();
+  }
+}
+
+async function deleteModel(id) {
+  showConfirm('🗑️', 'حذف الموديل', 'سيتم حذف هذا الموديل نهائياً. هل أنت متأكد؟', async () => {
+    try {
+      await db.collection(COLLECTION).doc(id).delete();
+      showToast('تم حذف الموديل', 'success');
+    } catch(e) {
+      showToast('سيُحذف عند عودة الاتصال', 'success');
+    }
+  });
+}
+
+function editModel(id) {
+  const model = models.find(m => m.id === id);
+  if (!model) return;
+  editingId = id;
+  document.getElementById('rmbPrice').value    = model.rmb;
+  document.getElementById('sourceInput').value = model.source || '';
+  document.getElementById('notesInput').value  = model.notes  || '';
+  currentAges = [...(model.ages || [])];
+  renderAgeChips();
+  calculatePrices();
+  if (model.image) {
+    currentImageBase64 = model.image;
+    document.getElementById('imagePreview').src = model.image;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('uploadPlaceholder').style.display = 'none';
+    document.getElementById('uploadArea').classList.add('has-image');
+    document.getElementById('removeImageBtn').style.display = 'flex';
+  }
+  document.querySelector('.btn-primary').textContent = '✏️ تحديث الموديل';
+  document.querySelector('.sidebar').scrollIntoView({ behavior: 'smooth' });
+  showToast('يمكنك الآن تعديل الموديل', 'success');
+}
+
+function resetForm() {
+  document.getElementById('rmbPrice').value    = '';
+  document.getElementById('usdPrice').value    = '';
+  document.getElementById('iqdPrice').value    = '';
+  document.getElementById('sourceInput').value = '';
+  document.getElementById('notesInput').value  = '';
+  document.getElementById('ageFrom').value      = '';
+  document.getElementById('ageTo').value        = '';
+  document.getElementById('ageFromUnit').value  = 'سنة';
+  document.getElementById('ageToUnit').value    = 'سنة';
+  currentAges        = [];
+  currentImageBase64 = null;
+  renderAgeChips();
+  removeImage(null);
+  editingId = null;
+  document.querySelector('.btn-primary').textContent = '💾 حفظ الموديل';
+}
+
+async function clearAllConfirm() {
+  if (models.length === 0) { showToast('لا توجد موديلات لحذفها', 'error'); return; }
+  showConfirm('⚠️', 'حذف جميع الموديلات', `سيتم حذف جميع الموديلات (${models.length} موديل) نهائياً. هل أنت متأكد؟`, async () => {
+    try {
+      const batch = db.batch();
+      models.forEach(m => batch.delete(db.collection(COLLECTION).doc(m.id)));
+      await batch.commit();
+      showToast('تم حذف جميع الموديلات', 'success');
+    } catch(e) {
+      showToast('سيُحذف الكل عند عودة الاتصال', 'success');
+    }
+  });
+}
+
+/* ================================================================
+   RENDER
+   ================================================================ */
+function renderGrid() {
+  const grid = document.getElementById('modelsGrid');
+  if (models.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">👗</div>
+        <h3>لا توجد موديلات بعد</h3>
+        <p>أضف موديلك الأول من النموذج</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = models.map(m => {
+    const { usd, iqd } = calcModel(m.rmb);
+    const agesHtml = (m.ages || []).map(a => `<span class="age-tag">${a}</span>`).join('');
+    return `
+    <div class="model-card">
+      <div class="model-card-image">
+        ${m.image
+          ? `<img src="${m.image}" alt="موديل" loading="lazy">`
+          : `<div class="no-image"><span>👗</span><span>لا توجد صورة</span></div>`}
+        <div class="card-img-actions">
+          ${m.image ? `<button class="btn" onclick="downloadImage('${m.id}')" title="تنزيل">⬇️</button>` : ''}
+        </div>
+      </div>
+      <div class="model-card-body">
+        ${m.source ? `<div class="model-source"><div class="source-dot"></div><span class="source-name" title="${m.source}">${m.source}</span></div>` : ''}
+        <div class="price-breakdown">
+          <div class="price-row">
+            <span class="price-currency"><span class="currency-flag">🇨🇳</span> رمبي</span>
+            <span class="price-amount rmb">¥ ${m.rmb.toFixed(2)}</span>
+          </div>
+          <div class="price-row">
+            <span class="price-currency"><span class="currency-flag">🇺🇸</span> دولار</span>
+            <span class="price-amount usd">$ ${usd.toFixed(3)}</span>
+          </div>
+          <div class="price-row highlight">
+            <span class="price-currency"><span class="currency-flag">🇮🇶</span> دينار</span>
+            <span class="price-amount iqd">${Math.round(iqd).toLocaleString('ar-IQ')} د.ع</span>
+          </div>
+        </div>
+        ${agesHtml ? `<div class="age-tags">${agesHtml}</div>` : ''}
+        ${m.notes ? `<div style="font-size:12px;color:var(--text-muted);padding:4px 8px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border);">${m.notes}</div>` : ''}
+      </div>
+      <div class="model-card-footer">
+        ${m.image ? `<button class="btn btn-ghost" onclick="downloadImage('${m.id}')" style="font-size:11px;">⬇️ صورة</button>` : ''}
+        <button class="btn btn-ghost" onclick="editModel('${m.id}')" style="font-size:11px;">✏️ تعديل</button>
+        <button class="btn btn-danger-ghost" onclick="deleteModel('${m.id}')" style="font-size:11px;">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('toolbarCount').textContent = `${models.length} موديل`;
+}
+
+function updateStats() {
+  const count    = models.length;
+  const totalRmb = models.reduce((s, m) => s + (m.rmb || 0), 0);
+  const { rmbToUsd, usdToIqd } = getRates();
+  const totalUsd = totalRmb * rmbToUsd;
+  const totalIqd = totalUsd * usdToIqd;
+  document.getElementById('statCount').textContent = count;
+  document.getElementById('statRmb').textContent   = '¥ ' + totalRmb.toFixed(2);
+  document.getElementById('statUsd').textContent   = '$ ' + totalUsd.toFixed(2);
+  document.getElementById('statIqd').textContent   = Math.round(totalIqd).toLocaleString('ar-IQ') + ' د.ع';
+  document.getElementById('toolbarCount').textContent = `${models.length} موديل`;
+}
+
+/* ================================================================
+   DOWNLOAD IMAGE
+   ================================================================ */
+function downloadImage(id) {
+  const model = models.find(m => m.id === id);
+  if (!model || !model.image) { showToast('لا توجد صورة', 'error'); return; }
+  const a = document.createElement('a');
+  a.href = model.image;
+  a.download = `model_${id}.jpg`;
+  a.click();
+  showToast('جارٍ تنزيل الصورة...', 'success');
+}
+
+/* ================================================================
+   EXPORT EXCEL — ExcelJS مع صور مدمجة حقيقية
+   ================================================================ */
+async function exportExcel() {
+  if (models.length === 0) { showToast('لا توجد موديلات للتصدير', 'error'); return; }
+  showLoading('جارٍ إنشاء ملف Excel مع الصور...');
+
+  try {
+    const { rmbToUsd, usdToIqd } = getRates();
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'إدارة موديلات الأطفال';
+    wb.created = new Date();
+
+    const ws = wb.addWorksheet('الموديلات', {
+      views: [{ rightToLeft: true }]  // RTL
+    });
+
+    // ===== تعريف الأعمدة =====
+    // A=صورة(عرض 9)، B=رقم، C=مصدر، D=RMB، E=USD، F=IQD، G=أعمار، H=ملاحظات، I=تاريخ
+    ws.columns = [
+      { key: 'img',    width: 9  },   // A — الصورة
+      { key: 'num',    width: 6  },   // B — رقم
+      { key: 'source', width: 22 },   // C — المصدر
+      { key: 'rmb',    width: 13 },   // D — RMB
+      { key: 'usd',    width: 13 },   // E — USD
+      { key: 'iqd',    width: 18 },   // F — IQD
+      { key: 'ages',   width: 28 },   // G — الأعمار
+      { key: 'notes',  width: 22 },   // H — ملاحظات
+      { key: 'date',   width: 14 },   // I — تاريخ
+    ];
+
+    // ===== نمط الهيدر =====
+    const headerRow = ws.addRow(['الصورة','رقم','المصدر','سعر RMB ¥','سعر USD $','سعر IQD','الأعمار','ملاحظات','تاريخ الإضافة']);
+    headerRow.height = 22;
+    headerRow.eachCell(cell => {
+      cell.fill    = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF1A3C5E' } };
+      cell.font    = { bold:true, color:{ argb:'FFFFFFFF' }, size:10 };
+      cell.alignment = { vertical:'middle', horizontal:'center', wrapText:true };
+      cell.border  = { bottom:{ style:'thin', color:{ argb:'FFE2E8F0' } } };
+    });
+
+    // ===== صفوف البيانات =====
+    for (let i = 0; i < models.length; i++) {
+      const m = models[i];
+      const { usd, iqd } = calcModel(m.rmb);
+      const dateStr = m.createdAt?.toDate
+        ? m.createdAt.toDate().toLocaleDateString('ar-IQ')
+        : '-';
+
+      const row = ws.addRow([
+        '',                              // A — الصورة (ستُضاف يدوياً)
+        i + 1,                           // B — رقم
+        m.source || '',                  // C — المصدر
+        m.rmb,                           // D — RMB
+        parseFloat(usd.toFixed(3)),      // E — USD
+        Math.round(iqd),                 // F — IQD
+        (m.ages || []).join('\n'),        // G — الأعمار
+        m.notes || '',                   // H — ملاحظات
+        dateStr                          // I — تاريخ
+      ]);
+
+      // ارتفاع الصف = 60 نقطة
+      row.height = 60;
+
+      // تنسيق الخلايا
+      row.eachCell((cell, colNum) => {
+        cell.alignment = { vertical:'middle', horizontal: colNum <= 2 ? 'center' : 'right', wrapText:true };
+        cell.border = {
+          top:    { style:'thin', color:{ argb:'FFE2E8F0' } },
+          bottom: { style:'thin', color:{ argb:'FFE2E8F0' } },
+          left:   { style:'thin', color:{ argb:'FFE2E8F0' } },
+          right:  { style:'thin', color:{ argb:'FFE2E8F0' } }
+        };
+        // تبديل لون الصفوف
+        if (i % 2 === 1) {
+          cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF8FAFC' } };
+        }
+      });
+
+      // تنسيق خلايا الأسعار
+      ws.getCell(`D${i+2}`).numFmt = '¥#,##0.00';
+      ws.getCell(`E${i+2}`).numFmt = '$#,##0.000';
+      ws.getCell(`F${i+2}`).numFmt = '#,##0';
+
+      // ===== إدراج الصورة =====
+      if (m.image) {
+        try {
+          // استخراج base64 النظيف
+          const base64Clean = m.image.replace(/^data:image\/(png|jpeg|jpg|gif|webp);base64,/, '');
+          const ext = m.image.startsWith('data:image/png') ? 'png' : 'jpeg';
+
+          const imgId = wb.addImage({
+            base64: base64Clean,
+            extension: ext
+          });
+
+          // تثبيت الصورة داخل الخلية A (العمود 0، الصف i+1 بعد الهيدر)
+          ws.addImage(imgId, {
+            tl: { col: 0.05, row: i + 1.05 },  // أعلى يسار مع هامش صغير
+            br: { col: 0.95, row: i + 2 - 0.05 }, // أسفل يمين مع هامش
+            editAs: 'oneCell'
+          });
+        } catch(imgErr) {
+          console.warn('Image insert error for model', i, imgErr);
+        }
+      }
+    }
+
+    // ===== صفوف الإجماليات =====
+    ws.addRow([]); // فراغ
+    ws.addRow([]);
+
+    const totalRmb = models.reduce((s,m) => s + m.rmb, 0);
+    const totalUsd = totalRmb * rmbToUsd;
+    const totalIqd = totalUsd * usdToIqd;
+
+    const summaryData = [
+      ['', '', 'الإجماليات:', '', '', '', '', '', ''],
+      ['', '', 'إجمالي الموديلات:',  models.length],
+      ['', '', 'إجمالي RMB ¥:',      totalRmb.toFixed(2)],
+      ['', '', 'إجمالي USD $:',       totalUsd.toFixed(2)],
+      ['', '', 'إجمالي IQD:',         Math.round(totalIqd).toLocaleString()],
+      ['', '', '1 RMB =',             `${rmbToUsd} USD`],
+      ['', '', '1 USD =',             `${usdToIqd} IQD`],
+    ];
+
+    summaryData.forEach((rowData, si) => {
+      const r = ws.addRow(rowData);
+      r.height = 18;
+      if (rowData[2]) {
+        const labelCell = r.getCell(3);
+        labelCell.font = { bold: true, color:{ argb: si===0 ? 'FF1A3C5E' : 'FF374151' } };
+        labelCell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: si===0 ? 'FFE0F2FE' : 'FFF8FAFC' } };
+        if (rowData[3] !== undefined) {
+          const valCell = r.getCell(4);
+          valCell.font = { bold: true, color:{ argb:'FF1A3C5E' } };
+        }
+      }
+    });
+
+    // ===== تنزيل الملف =====
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    saveAs(blob, `موديلات_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+    hideLoading();
+    showToast('تم تصدير Excel مع الصور بنجاح 📊', 'success');
+
+  } catch(e) {
+    hideLoading();
+    showToast('خطأ أثناء التصدير: ' + e.message, 'error');
+    console.error('Excel export error:', e);
+  }
+}
+
+/* ================================================================
+   EXPORT PDF
+   ================================================================ */
+async function exportPDF() {
+  if (models.length === 0) { showToast('لا توجد موديلات للتصدير', 'error'); return; }
+  showLoading('جارٍ إنشاء PDF...');
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const { rmbToUsd, usdToIqd } = getRates();
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(26,60,94); doc.rect(0,0,pageW,22,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text('Children Models Purchase Report', pageW/2, 10, {align:'center'});
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}  |  Models: ${models.length}  |  1 RMB = ${rmbToUsd} USD  |  1 USD = ${usdToIqd} IQD`, pageW/2, 17, {align:'center'});
+    doc.setFillColor(232,160,32); doc.rect(0,22,pageW,10,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    const tR=models.reduce((s,m)=>s+m.rmb,0), tU=tR*rmbToUsd, tI=tU*usdToIqd;
+    doc.text(`Total RMB: ¥${tR.toFixed(2)}   |   Total USD: $${tU.toFixed(2)}   |   Total IQD: ${Math.round(tI).toLocaleString()}`, pageW/2, 28, {align:'center'});
+    const cols=[{header:'#',dataKey:'num'},{header:'Image',dataKey:'img'},{header:'Source',dataKey:'source'},{header:'RMB',dataKey:'rmb'},{header:'USD',dataKey:'usd'},{header:'IQD',dataKey:'iqd'},{header:'Ages',dataKey:'ages'},{header:'Notes',dataKey:'notes'}];
+    const rows=models.map((m,i)=>{const {usd,iqd}=calcModel(m.rmb);return{num:i+1,img:m.image?'':'No img',source:m.source||'-',rmb:`¥${m.rmb.toFixed(2)}`,usd:`$${usd.toFixed(3)}`,iqd:Math.round(iqd).toLocaleString(),ages:(m.ages||[]).join('\n')||'-',notes:m.notes||'-'};});
+    doc.autoTable({columns:cols,body:rows,startY:34,styles:{fontSize:8,cellPadding:3,valign:'middle'},headStyles:{fillColor:[26,60,94],textColor:[255,255,255],fontStyle:'bold'},alternateRowStyles:{fillColor:[248,250,252]},columnStyles:{num:{cellWidth:8},img:{cellWidth:28},source:{cellWidth:35},rmb:{cellWidth:22},usd:{cellWidth:22},iqd:{cellWidth:28},ages:{cellWidth:42},notes:{cellWidth:48}},didDrawCell:(data)=>{if(data.column.dataKey==='img'&&data.section==='body'){const m=models[data.row.index];if(m&&m.image){try{const sz=Math.min(data.cell.width-2,data.cell.height-2);doc.addImage(m.image,'JPEG',data.cell.x+1,data.cell.y+1,sz,sz);}catch(e){}}}},margin:{top:34,left:5,right:5}});
+    const pc=doc.internal.getNumberOfPages();
+    for(let p=1;p<=pc;p++){doc.setPage(p);doc.setFillColor(240,244,248);doc.rect(0,doc.internal.pageSize.getHeight()-8,pageW,8,'F');doc.setTextColor(100,100,100);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.text(`Page ${p}/${pc} | Children Models Manager`,pageW/2,doc.internal.pageSize.getHeight()-3,{align:'center'});}
+    doc.save(`models_report_${new Date().toISOString().slice(0,10)}.pdf`);
+    hideLoading(); showToast('تم تصدير PDF بنجاح 📄', 'success');
+  } catch(e){ hideLoading(); showToast('خطأ أثناء إنشاء PDF','error'); console.error(e); }
+}
+
+/* ================================================================
+   UI HELPERS
+   ================================================================ */
+function showToast(msg, type='success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type==='success'?'✅':'❌'}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function showLoading(text='جارٍ المعالجة...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+let modalCallback = null;
+
+function showConfirm(icon, title, text, onConfirm) {
+  document.getElementById('modalIcon').textContent  = icon;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').textContent  = text;
+  modalCallback = onConfirm;
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('active');
+  modalCallback = null;
+}
+
+document.getElementById('modalConfirmBtn').addEventListener('click', () => { if(modalCallback) modalCallback(); closeModal(); });
+document.getElementById('confirmModal').addEventListener('click', e => { if(e.target===document.getElementById('confirmModal')) closeModal(); });
+
+/* ================================================================
+   INIT
+   ================================================================ */
+function init() {
+  loadRates();
+  renderAgeChips();
+  updateSyncBadge(navigator.onLine ? 'syncing' : 'offline');
+  startRealtimeListener();
+  initSecurityTimer();
+}
+
+init();
+</script>
+</body>
+</html>
