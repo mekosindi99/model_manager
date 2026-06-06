@@ -3,15 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إدارة موديلات الأطفال</title>
+<title>إدارة موديلات الأطفال - الأسعار أفقياً</title>
 
 <!-- External Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<!-- ExcelJS — لدعم الصور داخل Excel -->
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<!-- FileSaver — لتنزيل الملف -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <!-- Firebase SDK -->
@@ -311,6 +309,23 @@
     gap: 12px;
   }
 
+  /* الأسعار في صف أفقي */
+  .price-row-horizontal {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .price-row-horizontal .form-group {
+    flex: 1;
+    min-width: 0;
+  }
+  @media (max-width: 600px) {
+    .price-row-horizontal {
+      flex-direction: column;
+    }
+  }
+
   .calc-badge {
     display: inline-flex;
     align-items: center;
@@ -326,17 +341,15 @@
   }
 
   /* ===== IMAGE UPLOAD ===== */
-  /* ===== IMAGE UPLOAD AREA — strict 1:1 (1080×1080) ===== */
   .image-upload-area {
     border: 2px dashed var(--border-strong);
     border-radius: var(--radius-md);
-    padding: 0;                  /* no padding — ratio container handles sizing */
+    padding: 0;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
     background: #f8fafc;
     position: relative;
-    /* Force perfect square at all times */
     width: 100%;
     aspect-ratio: 1 / 1;
     overflow: hidden;
@@ -356,13 +369,12 @@
     padding: 0;
   }
 
-  /* Preview image — fills the square perfectly, crops if needed */
   .image-upload-area img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;        /* crop to fill — no stretching, no distortion */
+    object-fit: cover;
     object-position: center;
     display: block;
     border-radius: calc(var(--radius-md) - 2px);
@@ -461,13 +473,53 @@
     flex: 1;
   }
 
+  /* ===== DYNAMIC LINK ROWS ===== */
+  .link-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .link-platform-select {
+    flex-shrink: 0;
+    width: 110px;
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    background: #fafafa !important;
+    font-family: var(--font-arabic);
+    outline: none;
+    cursor: pointer;
+  }
+  .link-platform-select:focus { border-color: var(--primary-light) !important; }
+  .link-url-input {
+    flex: 1;
+    direction: ltr;
+    font-size: 12px !important;
+  }
+  .link-remove-btn {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: var(--radius-sm);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .link-remove-btn:hover { background: #fef2f2; }
+
   /* ===== URL FIELDS ===== */
   .url-field-wrap {
     position: relative;
   }
 
   .url-field-wrap input {
-    padding-left: 32px !important;   /* space for the icon (LTR input) */
+    padding-left: 32px !important;
     direction: ltr;
     font-size: 12px !important;
   }
@@ -485,7 +537,6 @@
 
   .url-field-wrap input:focus ~ .url-field-icon { opacity: 0.8; }
 
-  /* green tick when a valid URL is typed */
   .url-field-wrap input.url-valid { border-color: #059669 !important; }
   .url-field-wrap input.url-valid ~ .url-field-icon::after {
     content: ' ✓';
@@ -710,11 +761,10 @@
     box-shadow: var(--shadow-lg);
   }
 
-  /* ===== MODEL CARD IMAGE — strict 1:1 square ===== */
   .model-card-image {
     position: relative;
     width: 100%;
-    aspect-ratio: 1 / 1;        /* perfect square always */
+    aspect-ratio: 1 / 1;
     background: #f1f5f9;
     overflow: hidden;
     flex-shrink: 0;
@@ -725,7 +775,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;          /* crop to fill — never stretches */
+    object-fit: cover;
     object-position: center;
     display: block;
   }
@@ -1186,58 +1236,38 @@
           <input type="text" id="sourceInput" placeholder="مثال: 1688، تاوباو، صفحة إنستغرام...">
         </div>
 
-        <!-- Instagram Link (optional) -->
+        <!-- Dynamic Links Component -->
         <div class="form-group">
-          <label>
-            <span style="display:inline-flex;align-items:center;gap:6px;">
-              <span style="background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:6px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">📷</span>
-              رابط انستغرام
-            </span>
-            <span class="optional-badge">اختياري</span>
-          </label>
-          <div class="url-field-wrap">
-            <input
-              type="url"
-              id="instagramInput"
-              placeholder="https://www.instagram.com/p/..."
-              oninput="validateInstagram(this)"
-              autocomplete="off"
-              spellcheck="false"
-              style="padding-left:32px !important; direction:ltr; font-size:12px !important;"
-            >
-            <span class="url-field-icon" id="instagramIcon">📸</span>
+          <label>روابط المنتج <span class="optional-badge">اختياري</span></label>
+          <div id="linksContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <button type="button" onclick="addLinkRow()" class="btn btn-outline"
+            style="margin-top:8px;width:100%;font-size:12px;padding:7px;">
+            + إضافة رابط
+          </button>
+        </div>
+
+        <!-- ===== الأسعار في صف أفقي (التعديل المطلوب) ===== -->
+        <div class="price-row-horizontal">
+          <div class="form-group">
+            <label>سعر الشراء بالرمبي (¥)</label>
+            <input type="number" id="rmbPrice" placeholder="0.00" step="0.01" min="0" oninput="calculatePrices()">
           </div>
-          <div id="instagramHint" style="display:none; font-size:11px; margin-top:4px; padding:4px 8px; border-radius:5px; direction:ltr;"></div>
-        </div>
-
-        <div class="form-group">
-          <label>سعر الشراء بالرمبي (¥)</label>
-          <input type="number" id="rmbPrice" placeholder="0.00" step="0.01" min="0"
-            oninput="calculatePrices()">
-        </div>
-
-        <!-- USD (auto) -->
-        <div class="form-group">
-          <div class="calc-badge">🔄 محسوب تلقائياً</div>
-          <label>سعر الشراء بالدولار ($)</label>
-          <input type="number" id="usdPrice" readonly placeholder="يحسب تلقائياً">
-        </div>
-
-        <!-- IQD (auto) -->
-        <div class="form-group">
-          <div class="calc-badge">🔄 محسوب تلقائياً</div>
-          <label>سعر الشراء بالدينار العراقي (د.ع)</label>
-          <input type="number" id="iqdPrice" readonly placeholder="يحسب تلقائياً">
+          <div class="form-group">
+            <div class="calc-badge">🔄 محسوب تلقائياً</div>
+            <label>سعر الشراء بالدولار ($)</label>
+            <input type="number" id="usdPrice" readonly placeholder="يحسب تلقائياً">
+          </div>
+          <div class="form-group">
+            <div class="calc-badge">🔄 محسوب تلقائياً</div>
+            <label>سعر الشراء بالدينار العراقي (د.ع)</label>
+            <input type="number" id="iqdPrice" readonly placeholder="يحسب تلقائياً">
+          </div>
         </div>
 
         <!-- Ages/Sizes -->
         <div class="form-group">
           <label>الأعمار / المقاسات المتوفرة</label>
-
-          <!-- الشرائح المضافة -->
           <div class="age-chips" id="ageChips"></div>
-
-          <!-- حقول الإدخال المنظمة: من [رقم] [وحدة] إلى [رقم] [وحدة] -->
           <div class="age-range-row">
             <span class="age-range-label">من</span>
             <input type="number" id="ageFrom" min="0" max="99" placeholder="0" class="age-num-input">
@@ -1253,70 +1283,12 @@
             </select>
             <button class="btn btn-outline btn-icon" onclick="addAgeRange()" title="إضافة">+</button>
           </div>
-
-          <!-- مثال توضيحي -->
           <div style="font-size:11px; color:var(--text-muted); margin-top:5px; padding: 5px 8px; background:#f8fafc; border-radius:6px; border:1px solid var(--border);">
             💡 مثال: من <strong>6 شهر</strong> إلى <strong>12 سنة</strong> ← اضغط +
           </div>
         </div>
 
-        <!-- ===== URL Fields (Optional) ===== -->
-        <div class="form-group">
-          <label>
-            رابط المنتج الأول
-            <span class="optional-badge">اختياري</span>
-          </label>
-          <div class="url-field-wrap">
-            <input
-              type="url"
-              id="url1Input"
-              placeholder="https://..."
-              oninput="validateUrl(this)"
-              autocomplete="off"
-              spellcheck="false"
-            >
-            <span class="url-field-icon">🔗</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>
-            رابط المنتج الثاني
-            <span class="optional-badge">اختياري</span>
-          </label>
-          <div class="url-field-wrap">
-            <input
-              type="url"
-              id="url2Input"
-              placeholder="https://..."
-              oninput="validateUrl(this)"
-              autocomplete="off"
-              spellcheck="false"
-            >
-            <span class="url-field-icon">🔗</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>
-            رابط المنتج الثالث
-            <span class="optional-badge">اختياري</span>
-          </label>
-          <div class="url-field-wrap">
-            <input
-              type="url"
-              id="url3Input"
-              placeholder="https://..."
-              oninput="validateUrl(this)"
-              autocomplete="off"
-              spellcheck="false"
-            >
-            <span class="url-field-icon">🔗</span>
-          </div>
-        </div>
-
         <!-- Notes -->
-
         <div class="form-group">
           <label>ملاحظات إضافية</label>
           <textarea id="notesInput" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
@@ -1403,7 +1375,6 @@
   </div>
 </div>
 
-
 <script>
 /* ================================================================
    FIREBASE CONFIG & INIT
@@ -1421,7 +1392,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// تفعيل الحفظ المحلي أوفلاين
 db.enablePersistence({ synchronizeTabs: true })
   .catch(err => console.warn('Offline persistence:', err.code));
 
@@ -1430,24 +1400,11 @@ const RATES_KEY  = 'modelManager_rates_v1';
 const TIMER_KEY  = 'modelManager_firestore_created';
 
 /* ================================================================
-   NUMBER FORMATTING — always Western Arabic numerals (0-9)
-   Never use toLocaleString('ar-*') — it outputs ٠١٢٣ Eastern numerals
-   All display and export numbers go through these helpers.
+   NUMBER FORMATTING
    ================================================================ */
-
-// Format integer with thousands separators using en-US (Western numerals)
-// e.g.  1234567  →  "1,234,567"
 const fmtInt = n => Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
-
-// Format decimal with fixed places using en-US
-// e.g.  9.6  →  "9.60"   (places=2)
 const fmtDec = (n, places = 2) =>
-  Number(n).toLocaleString('en-US', {
-    minimumFractionDigits: places,
-    maximumFractionDigits: places,
-  });
-
-// Format date as DD/MM/YYYY in Western numerals regardless of system locale
+  Number(n).toLocaleString('en-US', { minimumFractionDigits: places, maximumFractionDigits: places });
 const fmtDate = dateObj => {
   if (!(dateObj instanceof Date) || isNaN(dateObj)) return '-';
   const d = String(dateObj.getDate()).padStart(2, '0');
@@ -1461,7 +1418,7 @@ const fmtDate = dateObj => {
    ================================================================ */
 let models             = [];
 let currentAges        = [];
-let currentImageBase64 = null; // base64 مضغوطة للحفظ والعرض
+let currentImageBase64 = null;
 let editingId          = null;
 let isOnline           = navigator.onLine;
 
@@ -1581,8 +1538,6 @@ function calcModel(rmb) {
 
 /* ================================================================
    IMAGE HANDLING
-   - كل صورة تُقتص مربعاً من المركز (cover logic) ثم تُحفظ 1080×1080
-   - object-fit: cover على CSS يعني العرض دائماً مربع بدون تشويه
    ================================================================ */
 function triggerImageInput() {
   if (!currentImageBase64) document.getElementById('imageInput').click();
@@ -1618,12 +1573,6 @@ async function handleImageUpload(e) {
   }
 }
 
-/**
- * ضغط ذكي + اقتصاص مربع 1080×1080 (object-fit: cover منطق):
- * - يحسب أكبر مربع ممكن من مركز الصورة
- * - يرسمه على canvas بأبعاد 1080×1080
- * - يضغط بجودة تبدأ 92% وتنزل حتى < 700KB
- */
 async function smartCompress(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -1635,43 +1584,31 @@ async function smartCompress(file) {
       const srcW = img.naturalWidth;
       const srcH = img.naturalHeight;
 
-      // ── حساب منطقة الاقتصاص المركزية (cover logic) ──
-      // نأخذ أصغر بُعد كقاعدة للمربع
       const cropSize = Math.min(srcW, srcH);
-      const cropX    = (srcW - cropSize) / 2;  // نبدأ من المنتصف أفقياً
-      const cropY    = (srcH - cropSize) / 2;  // نبدأ من المنتصف عمودياً
+      const cropX    = (srcW - cropSize) / 2;
+      const cropY    = (srcH - cropSize) / 2;
 
-      // ── canvas دائماً 1080×1080 ──
       const OUTPUT = 1080;
       const canvas = document.createElement('canvas');
       canvas.width  = OUTPUT;
       canvas.height = OUTPUT;
       const ctx = canvas.getContext('2d');
 
-      // جودة رسم عالية
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // رسم المقطع المربع المقتصص على الـ canvas
-      ctx.drawImage(
-        img,
-        cropX, cropY, cropSize, cropSize,  // المصدر: منطقة المربع المقتصصة
-        0, 0, OUTPUT, OUTPUT               // الهدف: كامل الـ canvas 1080×1080
-      );
+      ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, OUTPUT, OUTPUT);
 
-      // ── ضغط تدريجي ──
-      const TARGET_BYTES = 700 * 1024;  // 700 KB
+      const TARGET_BYTES = 700 * 1024;
       const MIN_QUALITY  = 0.72;
       let   quality      = 0.92;
       let   result       = canvas.toDataURL('image/jpeg', quality);
 
-      // إذا الحجم مقبول أصلاً — لا ضغط
       if (result.length * 0.75 <= TARGET_BYTES) {
         resolve(result);
         return;
       }
 
-      // اضغط بخطوات صغيرة حتى الهدف
       while (quality > MIN_QUALITY) {
         quality -= 0.04;
         result   = canvas.toDataURL('image/jpeg', quality);
@@ -1704,64 +1641,69 @@ function removeImage(e) {
 }
 
 /* ================================================================
-   URL VALIDATION — live green-tick feedback, never blocks saving
+   DYNAMIC LINKS COMPONENT
    ================================================================ */
-function validateUrl(input) {
-  const v = input.value.trim();
-  if (!v) { input.classList.remove('url-valid'); return; }
-  try {
-    new URL(v);
-    input.classList.add('url-valid');
-  } catch {
-    input.classList.remove('url-valid');
-  }
+const PLATFORM_CONFIG = {
+  instagram: { label: 'Instagram', key: 'instagramUrl', icon: '📷', placeholder: 'https://www.instagram.com/...' },
+  facebook:  { label: 'Facebook',  key: 'facebookUrl',  icon: '📘', placeholder: 'https://www.facebook.com/...'  },
+  tiktok:    { label: 'TikTok',    key: 'tiktokUrl',    icon: '🎵', placeholder: 'https://www.tiktok.com/...'    },
+  wechat:    { label: 'WeChat',    key: 'wechatUrl',    icon: '💬', placeholder: 'https://...'                   },
+  taobao:    { label: 'Taobao',    key: 'taobaoUrl',    icon: '🛍️', placeholder: 'https://item.taobao.com/...'  },
+  '1688':    { label: '1688',      key: 'link1688Url',  icon: '🏭', placeholder: 'https://detail.1688.com/...'  },
+};
+
+function addLinkRow(platformVal = 'instagram', urlVal = '') {
+  const container = document.getElementById('linksContainer');
+  const row = document.createElement('div');
+  row.className = 'link-row';
+
+  const opts = Object.entries(PLATFORM_CONFIG)
+    .map(([val, cfg]) => `<option value="${val}" ${val === platformVal ? 'selected' : ''}>${cfg.icon} ${cfg.label}</option>`)
+    .join('');
+
+  const ph = PLATFORM_CONFIG[platformVal]?.placeholder || 'https://...';
+
+  row.innerHTML = `
+    <select class="link-platform-select form-group" onchange="updateLinkPlaceholder(this)">
+      ${opts}
+    </select>
+    <input type="url" class="link-url-input form-group"
+      placeholder="${ph}" value="${urlVal}"
+      spellcheck="false" autocomplete="off" style="margin-bottom:0;">
+    <button type="button" class="link-remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+
+  container.appendChild(row);
 }
 
-// Instagram-specific validator with friendly hint
-function validateInstagram(input) {
-  const v     = input.value.trim();
-  const hint  = document.getElementById('instagramHint');
-  const icon  = document.getElementById('instagramIcon');
+function updateLinkPlaceholder(select) {
+  const ph = PLATFORM_CONFIG[select.value]?.placeholder || 'https://...';
+  select.nextElementSibling.placeholder = ph;
+}
 
-  if (!v) {
-    input.classList.remove('url-valid');
-    hint.style.display = 'none';
-    icon.textContent   = '📸';
-    return;
-  }
+function collectLinks() {
+  const result = {};
+  document.querySelectorAll('#linksContainer .link-row').forEach(row => {
+    const platform = row.querySelector('.link-platform-select').value;
+    const url      = row.querySelector('.link-url-input').value.trim();
+    const key      = PLATFORM_CONFIG[platform]?.key;
+    if (key && url) result[key] = url;
+  });
+  return result;
+}
 
-  // Detect Instagram URL patterns
-  const igPattern = /instagram\.com\/(p|reel|tv|stories|[^/?#]+)\/?/i;
-  const isIg      = igPattern.test(v);
-  let   isValid   = false;
+function loadLinks(model) {
+  document.getElementById('linksContainer').innerHTML = '';
+  Object.entries(PLATFORM_CONFIG).forEach(([platformVal, cfg]) => {
+    if (model[cfg.key]) addLinkRow(platformVal, model[cfg.key]);
+  });
+}
 
-  try { new URL(v); isValid = true; } catch { isValid = false; }
-
-  if (isIg && isValid) {
-    input.classList.add('url-valid');
-    icon.textContent        = '✅';
-    hint.style.display      = 'block';
-    hint.style.background   = '#f0fdf4';
-    hint.style.color        = '#059669';
-    hint.style.border       = '1px solid #a7f3d0';
-    hint.textContent        = '✓ Instagram link detected';
-  } else if (isValid) {
-    input.classList.add('url-valid');
-    icon.textContent        = '🔗';
-    hint.style.display      = 'block';
-    hint.style.background   = '#fffbeb';
-    hint.style.color        = '#d97706';
-    hint.style.border       = '1px solid #fde68a';
-    hint.textContent        = '⚠ Not a standard Instagram URL — saved as-is';
-  } else {
-    input.classList.remove('url-valid');
-    icon.textContent        = '📸';
-    hint.style.display      = 'none';
-  }
+function resetLinks() {
+  document.getElementById('linksContainer').innerHTML = '';
 }
 
 /* ================================================================
-   AGES — نظام النطاق (من رقم وحدة إلى رقم وحدة)
+   AGES
    ================================================================ */
 function renderAgeChips() {
   document.getElementById('ageChips').innerHTML = currentAges.map((a, i) => `
@@ -1781,7 +1723,6 @@ function addAgeRange() {
     return;
   }
 
-  // بناء النص: "6 شهر - 12 سنة"
   const label = `${fromNum} ${fromUnit} - ${toNum} ${toUnit}`;
 
   if (!currentAges.includes(label)) {
@@ -1789,12 +1730,10 @@ function addAgeRange() {
     renderAgeChips();
   }
 
-  // تفريغ الحقول بعد الإضافة
   document.getElementById('ageFrom').value = '';
   document.getElementById('ageTo').value   = '';
 }
 
-// دعم Enter على حقول الأعمار
 document.addEventListener('DOMContentLoaded', () => {
   ['ageFrom','ageTo'].forEach(id => {
     const el = document.getElementById(id);
@@ -1805,7 +1744,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function removeAge(i) { currentAges.splice(i, 1); renderAgeChips(); }
-
 
 /* ================================================================
    FIRESTORE CRUD
@@ -1837,35 +1775,14 @@ async function saveModel() {
 
   const { usd, iqd } = calcModel(rmb);
   const notes = document.getElementById('notesInput').value.trim();
+  const links = collectLinks();
 
-  // ── Optional URL fields — sanitised, null when empty ──────────
-  // Never block saving if URLs are blank or invalid
-  const sanitizeUrl = id => {
-    const v = document.getElementById(id).value.trim();
-    if (!v) return null;                          // blank → null (not stored)
-    try { new URL(v); return v; }                  // valid URL → store as-is
-    catch { return v; }                            // invalid but not empty → store anyway
-  };
-
-  const url1 = sanitizeUrl('url1Input');        // optional
-  const url2 = sanitizeUrl('url2Input');        // optional
-  const url3 = sanitizeUrl('url3Input');        // optional
-  const instagramUrl = sanitizeUrl('instagramInput'); // optional
-
-  // Build Firestore document — omit null URL fields entirely
   const data = {
-    image:     currentImageBase64 || null,
-    source,
-    rmb,
-    usd,
-    iqd,
-    ages:      [...currentAges],
+    image: currentImageBase64 || null,
+    source, rmb, usd, iqd,
+    ages:  [...currentAges],
     notes,
-    // Only write URL keys that have a value; omit when null
-    ...(url1         !== null && { url1 }),
-    ...(url2         !== null && { url2 }),
-    ...(url3         !== null && { url3 }),
-    ...(instagramUrl !== null && { instagramUrl }),
+    ...links,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -1905,18 +1822,7 @@ function editModel(id) {
   document.getElementById('rmbPrice').value    = model.rmb;
   document.getElementById('sourceInput').value = model.source || '';
   document.getElementById('notesInput').value  = model.notes  || '';
-  // Load optional URL fields — fall back to '' if not stored
-  document.getElementById('url1Input').value      = model.url1         || '';
-  document.getElementById('url2Input').value      = model.url2         || '';
-  document.getElementById('url3Input').value      = model.url3         || '';
-  document.getElementById('instagramInput').value = model.instagramUrl || '';
-  // Re-run validation styling for all URL fields
-  ['url1Input','url2Input','url3Input'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el.value) validateUrl(el);
-  });
-  const igEl = document.getElementById('instagramInput');
-  if (igEl.value) validateInstagram(igEl);
+  loadLinks(model);
   currentAges = [...(model.ages || [])];
   renderAgeChips();
   calculatePrices();
@@ -1939,19 +1845,7 @@ function resetForm() {
   document.getElementById('iqdPrice').value    = '';
   document.getElementById('sourceInput').value = '';
   document.getElementById('notesInput').value  = '';
-  document.getElementById('url1Input').value      = '';
-  document.getElementById('url2Input').value      = '';
-  document.getElementById('url3Input').value      = '';
-  document.getElementById('instagramInput').value = '';
-  // Clear all URL validation states
-  ['url1Input','url2Input','url3Input','instagramInput'].forEach(id =>
-    document.getElementById(id).classList.remove('url-valid')
-  );
-  // Reset Instagram hint & icon
-  const igHint = document.getElementById('instagramHint');
-  if (igHint) igHint.style.display = 'none';
-  const igIcon = document.getElementById('instagramIcon');
-  if (igIcon) igIcon.textContent = '📸';
+  resetLinks();
   document.getElementById('ageFrom').value      = '';
   document.getElementById('ageTo').value        = '';
   document.getElementById('ageFromUnit').value  = 'سنة';
@@ -2024,12 +1918,15 @@ function renderGrid() {
         </div>
         ${agesHtml ? `<div class="age-tags">${agesHtml}</div>` : ''}
         ${m.notes ? `<div style="font-size:12px;color:var(--text-muted);padding:4px 8px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border);">${m.notes}</div>` : ''}
-        ${(m.url1 || m.url2 || m.url3 || m.instagramUrl) ? `
+        ${Object.values(PLATFORM_CONFIG).some(cfg => m[cfg.key]) ? `
         <div style="display:flex;flex-direction:column;gap:4px;margin-top:2px;">
-          ${m.instagramUrl ? `<a href="${m.instagramUrl}" target="_blank" rel="noopener" style="font-size:11px;direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;padding:4px 8px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border-radius:5px;border:1px solid #f9a8d4;text-decoration:none;color:#be185d;" title="${m.instagramUrl}"><span style="background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:4px;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">📷</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Instagram</span></a>` : ''}
-          ${m.url1 ? `<a href="${m.url1}" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary-light);direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;padding:3px 6px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe;text-decoration:none;" title="${m.url1}">🔗 ${m.url1}</a>` : ''}
-          ${m.url2 ? `<a href="${m.url2}" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary-light);direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;padding:3px 6px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe;text-decoration:none;" title="${m.url2}">🔗 ${m.url2}</a>` : ''}
-          ${m.url3 ? `<a href="${m.url3}" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary-light);direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;padding:3px 6px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe;text-decoration:none;" title="${m.url3}">🔗 ${m.url3}</a>` : ''}
+          ${Object.entries(PLATFORM_CONFIG).map(([, cfg]) => m[cfg.key] ? `
+            <a href="${m[cfg.key]}" target="_blank" rel="noopener"
+              style="font-size:11px;direction:ltr;display:flex;align-items:center;gap:5px;padding:3px 7px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;text-decoration:none;color:#1a3c5e;overflow:hidden;white-space:nowrap;">
+              <span>${cfg.icon}</span>
+              <span style="font-weight:600;flex-shrink:0;">${cfg.label}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;color:#6b7280;font-size:10px;">${m[cfg.key]}</span>
+            </a>` : '').join('')}
         </div>` : ''}
       </div>
       <div class="model-card-footer">
@@ -2070,7 +1967,7 @@ function downloadImage(id) {
 }
 
 /* ================================================================
-   EXPORT EXCEL — ExcelJS مع صور مدمجة حقيقية
+   EXPORT EXCEL (with images)
    ================================================================ */
 async function exportExcel() {
   if (models.length === 0) { showToast('لا توجد موديلات للتصدير', 'error'); return; }
@@ -2082,33 +1979,25 @@ async function exportExcel() {
     wb.creator = 'Children Models Manager';
     wb.created = new Date();
 
-    // ── LTR worksheet (no rightToLeft) ──────────────────────────
-    const ws = wb.addWorksheet('Models', {
-      views: [{ rightToLeft: false }]   // ← strict LTR
-    });
+    const ws = wb.addWorksheet('Models', { views: [{ rightToLeft: false }] });
 
-    // ── Column definitions (A→L, left to right) ─────────────────
     ws.columns = [
-      { key: 'img',    width: 9  },   // A — Image
-      { key: 'num',    width: 6  },   // B — No.
-      { key: 'source', width: 22 },   // C — Source
-      { key: 'rmb',    width: 13 },   // D — RMB
-      { key: 'usd',    width: 13 },   // E — USD
-      { key: 'iqd',    width: 18 },   // F — IQD
-      { key: 'ages',   width: 28 },   // G — Ages
-      { key: 'notes',  width: 22 },   // H — Notes
-      { key: 'date',   width: 14 },   // I — Date Added
-      { key: 'url1',   width: 40 },   // J — URL 1 (optional)
-      { key: 'url2',   width: 40 },   // K — URL 2 (optional)
-      { key: 'url3',   width: 40 },   // L — URL 3 (optional)
+      { key: 'img',       width: 9  },
+      { key: 'num',       width: 6  },
+      { key: 'source',    width: 22 },
+      { key: 'rmb',       width: 13 },
+      { key: 'usd',       width: 13 },
+      { key: 'iqd',       width: 18 },
+      { key: 'ages',      width: 28 },
+      { key: 'notes',     width: 22 },
+      { key: 'date',      width: 14 },
+      ...Object.values(PLATFORM_CONFIG).map(cfg => ({ key: cfg.key, width: 38 }))
     ];
 
-    // ── Header row ───────────────────────────────────────────────
     const headerRow = ws.addRow([
-      'Image', '#', 'Source',
-      'RMB (¥)', 'USD ($)', 'IQD',
+      'Image', '#', 'Source', 'RMB (¥)', 'USD ($)', 'IQD',
       'Ages / Sizes', 'Notes', 'Date Added',
-      'URL 1', 'URL 2', 'URL 3'
+      ...Object.values(PLATFORM_CONFIG).map(cfg => cfg.label)
     ]);
     headerRow.height = 22;
     headerRow.eachCell(cell => {
@@ -2118,64 +2007,42 @@ async function exportExcel() {
       cell.border    = { bottom:{ style:'thin', color:{ argb:'FFE2E8F0' } } };
     });
 
-    // ── Data rows ────────────────────────────────────────────────
     for (let i = 0; i < models.length; i++) {
       const m = models[i];
       const { usd, iqd } = calcModel(m.rmb);
-
-      // Date in standard international format (YYYY-MM-DD)
-      const dateStr = m.createdAt?.toDate
-        ? fmtDate(m.createdAt.toDate())   // DD/MM/YYYY LTR
-        : '-';
+      const dateStr = m.createdAt?.toDate ? fmtDate(m.createdAt.toDate()) : '-';
 
       const row = ws.addRow([
-        '',                           // A — Image placeholder
-        i + 1,                        // B — Row number
-        m.source || '',               // C — Source
-        m.rmb,                        // D — RMB
-        parseFloat(usd.toFixed(3)),   // E — USD
-        Math.round(iqd),              // F — IQD
-        (m.ages || []).join('\n'),     // G — Ages
-        m.notes || '',                // H — Notes
-        dateStr,                      // I — Date
-        m.url1 || '',                 // J — URL 1 (optional — empty string if not set)
-        m.url2 || '',                 // K — URL 2 (optional)
-        m.url3 || '',                 // L — URL 3 (optional)
+        '',
+        i + 1,
+        m.source || '',
+        m.rmb,
+        parseFloat(usd.toFixed(3)),
+        Math.round(iqd),
+        (m.ages || []).join('\n'),
+        m.notes || '',
+        dateStr,
+        ...Object.values(PLATFORM_CONFIG).map(cfg => m[cfg.key] || ''),
       ]);
-
       row.height = 60;
 
+      const platformStartCol = 10;
       row.eachCell((cell, colNum) => {
         const isNum  = [2, 4, 5, 6].includes(colNum);
-        const isUrl  = [10, 11, 12].includes(colNum);
-        cell.alignment = {
-          vertical:     'middle',
-          horizontal:   isNum ? 'right' : 'left',
-          wrapText:     !isUrl,        // don't wrap URLs — let them scroll
-          readingOrder: 'ltr'
-        };
-        cell.border = {
-          top:    { style:'thin', color:{ argb:'FFE2E8F0' } },
-          bottom: { style:'thin', color:{ argb:'FFE2E8F0' } },
-          left:   { style:'thin', color:{ argb:'FFE2E8F0' } },
-          right:  { style:'thin', color:{ argb:'FFE2E8F0' } }
-        };
-        if (i % 2 === 1) {
-          cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF8FAFC' } };
-        }
-        // Style URL cells as blue hyperlinks
+        const isUrl  = colNum >= platformStartCol;
+        cell.alignment = { vertical:'middle', horizontal: isNum ? 'right' : 'left', wrapText: !isUrl, readingOrder:'ltr' };
+        cell.border    = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}}, left:{style:'thin',color:{argb:'FFE2E8F0'}}, right:{style:'thin',color:{argb:'FFE2E8F0'}} };
+        if (i % 2 === 1) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF8FAFC' } };
         if (isUrl && cell.value) {
-          cell.font  = { color:{ argb:'FF2563A8' }, underline: true };
+          cell.font = { color:{ argb:'FF2563A8' }, underline: true };
           try { cell.value = { text: cell.value, hyperlink: cell.value }; } catch(e) {}
         }
       });
 
-      // Number formats (LTR-friendly)
       ws.getCell(`D${i+2}`).numFmt = '¥#,##0.00';
       ws.getCell(`E${i+2}`).numFmt = '$#,##0.000';
       ws.getCell(`F${i+2}`).numFmt = '#,##0';
 
-      // ── Embed image in cell A ──────────────────────────────────
       if (m.image) {
         try {
           const base64Clean = m.image.replace(/^data:image\/(png|jpeg|jpg|gif|webp);base64,/, '');
@@ -2186,13 +2053,10 @@ async function exportExcel() {
             br: { col: 0.95, row: i + 2 - 0.05 },
             editAs: 'oneCell'
           });
-        } catch(imgErr) {
-          console.warn('Image insert error for model', i, imgErr);
-        }
+        } catch(imgErr) { console.warn('Image insert error', imgErr); }
       }
     }
 
-    // ── Summary section (LTR labels) ─────────────────────────────
     ws.addRow([]);
     ws.addRow([]);
 
@@ -2227,16 +2091,12 @@ async function exportExcel() {
       }
     });
 
-    // ── Write & download ─────────────────────────────────────────
     const buffer = await wb.xlsx.writeBuffer();
-    const blob   = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
+    const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, `models_report_${new Date().toISOString().slice(0,10)}.xlsx`);
 
     hideLoading();
     showToast('Excel exported successfully 📊', 'success');
-
   } catch(e) {
     hideLoading();
     showToast('Export error: ' + e.message, 'error');
@@ -2245,37 +2105,29 @@ async function exportExcel() {
 }
 
 /* ================================================================
-   EXPORT PDF — strict LTR layout
+   EXPORT PDF
    ================================================================ */
 async function exportPDF() {
   if (models.length === 0) { showToast('لا توجد موديلات للتصدير', 'error'); return; }
   showLoading('Generating PDF report...');
   try {
     const { jsPDF } = window.jspdf;
-    // Landscape A4, LTR (default jsPDF is LTR)
     const doc    = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const { rmbToUsd, usdToIqd } = getRates();
     const pageW  = doc.internal.pageSize.getWidth();
     const pageH  = doc.internal.pageSize.getHeight();
     const today  = fmtDate(new Date());
 
-    // ── Header bar ───────────────────────────────────────────────
     doc.setFillColor(26, 60, 94);
     doc.rect(0, 0, pageW, 24, 'F');
-
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
     doc.text('Children Models Purchase Report', pageW / 2, 11, { align: 'center' });
-
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(
-      `Date: ${today}   |   Total Models: ${models.length}   |   1 RMB = ${rmbToUsd} USD   |   1 USD = ${usdToIqd} IQD`,
-      pageW / 2, 19, { align: 'center' }
-    );
+    doc.text(`Date: ${today}   |   Total Models: ${models.length}   |   1 RMB = ${rmbToUsd} USD   |   1 USD = ${usdToIqd} IQD`, pageW / 2, 19, { align: 'center' });
 
-    // ── Totals bar ───────────────────────────────────────────────
     const tRmb = models.reduce((s, m) => s + m.rmb, 0);
     const tUsd = tRmb * rmbToUsd;
     const tIqd = tUsd * usdToIqd;
@@ -2285,12 +2137,8 @@ async function exportPDF() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(
-      `Total RMB: ¥${fmtDec(tRmb, 2)}     |     Total USD: $${fmtDec(tUsd, 2)}     |     Total IQD: ${fmtInt(Math.round(tIqd))} IQD`,
-      pageW / 2, 30, { align: 'center' }
-    );
+    doc.text(`Total RMB: ¥${fmtDec(tRmb, 2)}     |     Total USD: $${fmtDec(tUsd, 2)}     |     Total IQD: ${fmtInt(Math.round(tIqd))} IQD`, pageW / 2, 30, { align: 'center' });
 
-    // ── Table columns (LTR order: # → Image → Source → RMB → USD → IQD → Ages → Notes → Date) ──
     const columns = [
       { header: '#',          dataKey: 'num'    },
       { header: 'Image',      dataKey: 'img'    },
@@ -2300,72 +2148,44 @@ async function exportPDF() {
       { header: 'IQD',        dataKey: 'iqd'    },
       { header: 'Ages/Sizes', dataKey: 'ages'   },
       { header: 'Notes',      dataKey: 'notes'  },
-      { header: 'URL 1',      dataKey: 'url1'   },
-      { header: 'URL 2',      dataKey: 'url2'   },
-      { header: 'URL 3',      dataKey: 'url3'   },
+      ...Object.values(PLATFORM_CONFIG).map(cfg => ({ header: cfg.label, dataKey: cfg.key })),
       { header: 'Date',       dataKey: 'date'   },
     ];
 
     const rows = models.map((m, i) => {
       const { usd, iqd } = calcModel(m.rmb);
-      const dateStr = m.createdAt?.toDate
-        ? fmtDate(m.createdAt.toDate())
-        : '-';
+      const dateStr = m.createdAt?.toDate ? fmtDate(m.createdAt.toDate()) : '-';
+      const platformCells = {};
+      Object.values(PLATFORM_CONFIG).forEach(cfg => { platformCells[cfg.key] = m[cfg.key] || '-'; });
       return {
-        num:    i + 1,
-        img:    m.image ? '' : 'No image',
+        num: i + 1, img: m.image ? '' : 'No image',
         source: m.source || '-',
-        rmb:    `¥ ${fmtDec(m.rmb, 2)}`,
-        usd:    `$ ${fmtDec(usd, 3)}`,
-        iqd:    `${fmtInt(Math.round(iqd))} IQD`,
-        ages:   (m.ages || []).join('\n') || '-',
-        notes:  m.notes || '-',
-        url1:   m.url1  || '-',       // optional — '-' when not set
-        url2:   m.url2  || '-',       // optional
-        url3:   m.url3  || '-',       // optional
-        date:   dateStr,
+        rmb: `¥ ${fmtDec(m.rmb, 2)}`, usd: `$ ${fmtDec(usd, 3)}`, iqd: `${fmtInt(Math.round(iqd))} IQD`,
+        ages: (m.ages || []).join('\n') || '-', notes: m.notes || '-',
+        ...platformCells, date: dateStr,
       };
     });
 
+    const platformColStyles = {};
+    Object.values(PLATFORM_CONFIG).forEach(cfg => { platformColStyles[cfg.key] = { cellWidth: 24, halign: 'left', fontSize: 6 }; });
+
     doc.autoTable({
-      columns,
-      body: rows,
-      startY: 36,
-      // ── Global cell styles (LTR) ──────────────────────────────
-      styles: {
-        fontSize:    8,
-        cellPadding: 3,
-        valign:      'middle',
-        halign:      'left',     // ← all cells left-aligned (LTR)
-        font:        'helvetica',
-        overflow:    'linebreak',
-      },
-      headStyles: {
-        fillColor:  [26, 60, 94],
-        textColor:  [255, 255, 255],
-        fontStyle:  'bold',
-        halign:     'center',    // ← header cells centred
-        fontSize:   8.5,
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-      // ── Per-column widths & alignment ─────────────────────────
+      columns, body: rows, startY: 36,
+      styles:             { fontSize:8, cellPadding:3, valign:'middle', halign:'left', font:'helvetica', overflow:'linebreak' },
+      headStyles:         { fillColor:[26,60,94], textColor:[255,255,255], fontStyle:'bold', halign:'center', fontSize:8.5 },
+      alternateRowStyles: { fillColor:[248,250,252] },
       columnStyles: {
-        num:    { cellWidth: 7,  halign: 'center' },
-        img:    { cellWidth: 22, halign: 'center' },
-        source: { cellWidth: 24, halign: 'left'   },
-        rmb:    { cellWidth: 18, halign: 'right'  },
-        usd:    { cellWidth: 18, halign: 'right'  },
-        iqd:    { cellWidth: 22, halign: 'right'  },
-        ages:   { cellWidth: 28, halign: 'left'   },
-        notes:  { cellWidth: 28, halign: 'left'   },
-        url1:   { cellWidth: 38, halign: 'left', fontSize: 7 },
-        url2:   { cellWidth: 38, halign: 'left', fontSize: 7 },
-        url3:   { cellWidth: 38, halign: 'left', fontSize: 7 },
-        date:   { cellWidth: 18, halign: 'center' },
+        num:    { cellWidth: 6,  halign: 'center' },
+        img:    { cellWidth: 20, halign: 'center' },
+        source: { cellWidth: 22, halign: 'left'   },
+        rmb:    { cellWidth: 17, halign: 'right'  },
+        usd:    { cellWidth: 17, halign: 'right'  },
+        iqd:    { cellWidth: 20, halign: 'right'  },
+        ages:   { cellWidth: 22, halign: 'left'   },
+        notes:  { cellWidth: 22, halign: 'left'   },
+        ...platformColStyles,
+        date:   { cellWidth: 16, halign: 'center' },
       },
-      // ── Embed thumbnail images in the 'img' column ────────────
       didDrawCell: (data) => {
         if (data.column.dataKey === 'img' && data.section === 'body') {
           const m = models[data.row.index];
@@ -2373,7 +2193,6 @@ async function exportPDF() {
             try {
               const pad  = 2;
               const size = Math.min(data.cell.width, data.cell.height) - pad * 2;
-              // Centre the thumbnail in the cell
               const x = data.cell.x + (data.cell.width  - size) / 2;
               const y = data.cell.y + (data.cell.height - size) / 2;
               doc.addImage(m.image, 'JPEG', x, y, size, size);
@@ -2381,11 +2200,9 @@ async function exportPDF() {
           }
         }
       },
-      // Left margin matches LTR reading start
       margin: { top: 36, left: 5, right: 5 },
     });
 
-    // ── Footer on every page ──────────────────────────────────────
     const pageCount = doc.internal.getNumberOfPages();
     for (let p = 1; p <= pageCount; p++) {
       doc.setPage(p);
@@ -2396,7 +2213,6 @@ async function exportPDF() {
       doc.setTextColor(120, 120, 120);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      // Left: app name  |  Centre: page number  |  Right: date
       doc.text('Children Models Manager', 6, pageH - 3);
       doc.text(`Page ${p} / ${pageCount}`, pageW / 2, pageH - 3, { align: 'center' });
       doc.text(`Generated: ${today}`, pageW - 6, pageH - 3, { align: 'right' });
@@ -2405,7 +2221,6 @@ async function exportPDF() {
     doc.save(`models_report_${new Date().toISOString().slice(0, 10)}.pdf`);
     hideLoading();
     showToast('PDF exported successfully 📄', 'success');
-
   } catch(e) {
     hideLoading();
     showToast('PDF export error: ' + e.message, 'error');
